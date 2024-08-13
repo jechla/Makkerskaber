@@ -1,6 +1,6 @@
 use std::future::Future;
 
-use crate::{create_xlsx, generate_list_of_names, generate_pairs,};
+use crate::{create_xlsx, generate_list_of_names, generate_pairs};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -79,14 +79,15 @@ impl eframe::App for App {
                 let mut list_of_names = generate_list_of_names(&name_str);
                 fastrand::shuffle(&mut list_of_names);
                 let list_of_pairs = generate_pairs(list_of_names.iter().map(|s| &**s).collect());
-                
-                
-                let task = rfd::AsyncFileDialog::new().set_file_name("Makkerskaber.xlsx").save_file();
+
+                let task = rfd::AsyncFileDialog::new()
+                    .set_file_name("Makkerskaber.xlsx")
+                    .save_file();
                 let contents = create_xlsx(list_of_pairs).expect("moo");
-                
+
                 execute(async move {
                     let file = task.await;
-                    
+
                     if let Some(file) = file {
                         _ = file.write(&contents).await;
                     }
@@ -125,7 +126,7 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
 #[cfg(not(target_arch = "wasm32"))]
 fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
     // this is stupid... use any executor of your choice instead
-//    std::thread::spawn(move || futures::executor::block_on(f));
+       std::thread::spawn(move || futures::executor::block_on(f));
 }
 
 #[cfg(target_arch = "wasm32")]

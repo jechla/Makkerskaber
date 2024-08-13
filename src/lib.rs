@@ -13,12 +13,11 @@ struct Pairs {
 
 impl Pairs {
     fn new(org_size: usize) -> Self {
-        let size;
-        if org_size % 2 != 0 {
-            size = 1 + org_size;
+        let size = if org_size % 2 != 0 {
+            1 + org_size
         } else {
-            size = org_size;
-        }
+            org_size
+        };
         let mut pairs = vec![vec![None; size]; size];
         for i in 0..size {
             for j in 0..size {
@@ -29,7 +28,7 @@ impl Pairs {
                     let nr = (i + j) % (size - 1);
                     pairs[i][size - 1] = Some(nr);
                     pairs[size - 1][j] = Some(nr);
-                } else if let Some(_) = pairs[i][j] {
+                } else if pairs[i][j].is_some() {
                     continue;
                 } else {
                     pairs[i][j] = Some((i + j) % (size - 1));
@@ -78,12 +77,10 @@ fn generate_pairs(mut names: Vec<&str>) -> Vec<Vec<(String, String)>> {
 
 fn generate_list_of_names(namestr: &str) -> Vec<String> {
     //let list_of_names = Vec::new();
-    let name_list =namestr
+    let name_list = namestr
         .trim()
         .lines()
-        .map(|line| {
-            line.trim().to_string()
-        })
+        .map(|line| line.trim().to_string())
         .collect::<Vec<String>>();
     let mut new_name_list = Vec::new();
     for name in name_list.iter() {
@@ -94,30 +91,28 @@ fn generate_list_of_names(namestr: &str) -> Vec<String> {
 
 use rust_xlsxwriter::*;
 
-fn create_xlsx(all_pairs: Vec<Vec<(String,String)>>) -> Result<Vec<u8>, XlsxError> {
-    
+fn create_xlsx(all_pairs: Vec<Vec<(String, String)>>) -> Result<Vec<u8>, XlsxError> {
     let mut workbook = Workbook::new();
 
     for periode in 0..all_pairs.len() {
-        let worksheet = workbook.add_worksheet().set_name(format!("{}",periode+1))?;
-        let mut row: u32= 1;
+        let worksheet = workbook
+            .add_worksheet()
+            .set_name(format!("{}", periode + 1))?;
+        let mut row: u32 = 1;
         let mut grp_nr = 1;
-        let mut col =1;
+        let mut col = 1;
         for grp in all_pairs[periode].iter() {
-            if (row/4) as f32  >= (all_pairs[0].len() / 2) as f32  {
+            if (row / 4) as f32 >= (all_pairs[0].len() / 2) as f32 {
                 col += 4;
                 row = 1;
             }
             worksheet.write_string(row, col, format!("Gruppe {}", grp_nr))?;
-            worksheet.write_string(row+1, col, &grp.0)?;
-            worksheet.write_string(row+2, col,&grp.1)?;
+            worksheet.write_string(row + 1, col, &grp.0)?;
+            worksheet.write_string(row + 2, col, &grp.1)?;
             grp_nr += 1;
             row += 4;
-        } 
+        }
     }
- 
-    
-
 
     let buf = workbook.save_to_buffer()?;
     Ok(buf)
