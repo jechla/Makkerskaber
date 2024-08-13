@@ -1,11 +1,13 @@
+use std::future::Future;
+
+use crate::{create_xlsx, generate_list_of_names, generate_pairs,};
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
     // Example stuff:
     label: String,
-
-   
 }
 
 impl Default for App {
@@ -13,7 +15,6 @@ impl Default for App {
         Self {
             // Example stuff:
             label: "".to_owned(),
-            
         }
     }
 }
@@ -73,15 +74,29 @@ impl eframe::App for App {
                 ui.text_edit_multiline(&mut self.label);
             });
 
-            
             if ui.button("Generer Makkerskaber").clicked() {
-                fastrand::shuffle(&mut [1,2,3]);
+                let name_str = self.label.clone();
+                let mut list_of_names = generate_list_of_names(&name_str);
+                fastrand::shuffle(&mut list_of_names);
+                let list_of_pairs = generate_pairs(list_of_names.iter().map(|s| &**s).collect());
+                
+                
+                let task = rfd::AsyncFileDialog::new().set_file_name("Makkerskaber.xlsx").save_file();
+                let contents = create_xlsx(list_of_pairs).expect("moo");
+                
+                execute(async move {
+                    let file = task.await;
+                    
+                    if let Some(file) = file {
+                        _ = file.write(&contents).await;
+                    }
+                });
             }
 
             ui.separator();
 
             ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
+                "https://github.com/jechla/Makkerskaber/blob/main/",
                 "Source code."
             ));
 
@@ -105,4 +120,15 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
+    // this is stupid... use any executor of your choice instead
+//    std::thread::spawn(move || futures::executor::block_on(f));
+}
+
+#[cfg(target_arch = "wasm32")]
+fn execute<F: Future<Output = ()> + 'static>(f: F) {
+    wasm_bindgen_futures::spawn_local(f);
 }
