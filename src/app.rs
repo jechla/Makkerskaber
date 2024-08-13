@@ -126,7 +126,7 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
 #[cfg(not(target_arch = "wasm32"))]
 fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
     // this is stupid... use any executor of your choice instead
-       std::thread::spawn(move || futures::executor::block_on(f));
+    std::thread::spawn(move || futures::executor::block_on(f));
 }
 
 #[cfg(target_arch = "wasm32")]
