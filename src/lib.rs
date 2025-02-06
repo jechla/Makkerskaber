@@ -70,6 +70,7 @@ fn generate_pairs(mut names: Vec<&str>) -> Vec<Vec<(String, String)>> {
         for item in pairing.iter() {
             pairs.push((names[item.0].to_string(), names[item.1].to_string()));
         }
+        fastrand::shuffle(&mut pairs);
         matrix_of_pairs.push(pairs);
     }
     matrix_of_pairs
@@ -106,7 +107,7 @@ fn create_xlsx(all_pairs: Vec<Vec<(String, String)>>) -> Result<Vec<u8>, XlsxErr
                 col += 4;
                 row = 1;
             }
-            worksheet.write_string(row, col, format!("Gruppe {}", grp_nr))?;
+            worksheet.write_string(row, col, format!("Par {}", grp_nr))?;
             worksheet.write_string(row + 1, col, &grp.0)?;
             worksheet.write_string(row + 2, col, &grp.1)?;
             grp_nr += 1;
