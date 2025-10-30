@@ -1,25 +1,25 @@
-use std::future::Future;
-
-use crate::{create_xlsx, generate_list_of_names, generate_pairs};
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct App {
+pub struct TemplateApp {
     // Example stuff:
     label: String,
+
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    value: f32,
 }
 
-impl Default for App {
+impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: "".to_owned(),
+            label: "Hello World!".to_owned(),
+            value: 2.7,
         }
     }
 }
 
-impl App {
+impl TemplateApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -28,15 +28,15 @@ impl App {
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+        } else {
+            Default::default()
         }
-
-        Default::default()
     }
 }
 
-impl eframe::App for App {
-    /// Called by the frame work to save state before shutdown.
+impl eframe::App for TemplateApp {
+    /// Called by the framework to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
@@ -49,7 +49,7 @@ impl eframe::App for App {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
-            egui::menu::bar(ui, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
                 // NOTE: no File->Quit on web pages!
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
@@ -61,43 +61,28 @@ impl eframe::App for App {
                     ui.add_space(16.0);
                 }
 
-                egui::widgets::global_dark_light_mode_buttons(ui);
+                egui::widgets::global_theme_preference_buttons(ui);
             });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("Makkerskaber");
+            ui.heading("eframe template");
 
             ui.horizontal(|ui| {
-                ui.label("Indsæt klasseliste: ");
-                ui.text_edit_multiline(&mut self.label);
+                ui.label("Write something: ");
+                ui.text_edit_singleline(&mut self.label);
             });
 
-            if ui.button("Generer Makkerskaber").clicked() {
-                let name_str = self.label.clone();
-                let mut list_of_names = generate_list_of_names(&name_str);
-                fastrand::shuffle(&mut list_of_names);
-                let list_of_pairs = generate_pairs(list_of_names.iter().map(|s| &**s).collect());
-
-                let task = rfd::AsyncFileDialog::new()
-                    .set_file_name("Makkerskaber.xlsx")
-                    .save_file();
-                let contents = create_xlsx(list_of_pairs).expect("moo");
-
-                execute(async move {
-                    let file = task.await;
-
-                    if let Some(file) = file {
-                        _ = file.write(&contents).await;
-                    }
-                });
+            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
+            if ui.button("Increment").clicked() {
+                self.value += 1.0;
             }
 
             ui.separator();
 
             ui.add(egui::github_link_file!(
-                "https://github.com/jechla/Makkerskaber/blob/main/",
+                "https://github.com/emilk/eframe_template/blob/main/",
                 "Source code."
             ));
 
@@ -121,15 +106,4 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
-    // this is stupid... use any executor of your choice instead
-    std::thread::spawn(move || futures::executor::block_on(f));
-}
-
-#[cfg(target_arch = "wasm32")]
-fn execute<F: Future<Output = ()> + 'static>(f: F) {
-    wasm_bindgen_futures::spawn_local(f);
 }
